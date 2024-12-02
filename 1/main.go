@@ -6,8 +6,9 @@ import (
 	"log"
 	"os"
 	"slices"
-	"strconv"
 	"strings"
+
+	util "github.com/ccmetz/aoc-2024/util"
 )
 
 func main() {
@@ -16,6 +17,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	// Close file when main() stops running
 	defer file.Close()
 
@@ -27,8 +29,8 @@ func main() {
 		lineSlice := strings.Fields(scanner.Text())
 		if len(lineSlice) == 2 {
 			// Add values to slices
-			list1 = convertAndAddToList(list1, lineSlice[0])
-			list2 = convertAndAddToList(list2, lineSlice[1])
+			list1 = util.ConvertAndAddToList(list1, lineSlice[0])
+			list2 = util.ConvertAndAddToList(list2, lineSlice[1])
 		}
 	}
 
@@ -43,7 +45,7 @@ func main() {
 	totalDistance := 0
 	for index, val1 := range list1 {
 		val2 := list2[index]
-		totalDistance += absOfInt(val1 - val2)
+		totalDistance += util.AbsOfInt(val1 - val2)
 	}
 
 	// Part 1 Answer:
@@ -66,22 +68,4 @@ func main() {
 
 	// Part 2 Answer:
 	fmt.Printf("Similarity Score: %d\n", similarityScore)
-}
-
-// Converts the text to an int and appends it to the int slice
-func convertAndAddToList(list []int, text string) []int {
-	i, err := strconv.Atoi(text)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return append(list, i)
-}
-
-// Returns absolute value of an int
-func absOfInt(i int) int {
-	if i < 0 {
-		return i * -1
-	}
-	return i
 }
