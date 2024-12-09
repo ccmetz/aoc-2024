@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	file, err := os.ReadFile("./input8.test")
+	file, err := os.ReadFile("./input8.txt")
 	if err != nil {
 		log.Fatal("Error reading file")
 	}
@@ -30,6 +30,11 @@ func main() {
 	// Crawl through the grid, once a node is identified, get the diff between
 	// each node of the same type and add an antinote that is that distance away
 	// on either side of the nodes
+	//
+	// Part 2:
+	// I modified the code to instead calculate all possible antinodes on either side of
+	// the in-line nodes
+	//
 	antinodes := [][]int{}
 	for rowIdx, row := range grid {
 		for colIdx, col := range row {
@@ -46,41 +51,118 @@ func main() {
 				startCol = 0
 			}
 			otherNodes := findNodes(grid, startRow, startCol, node)
-			fmt.Println(node, otherNodes)
+
+			if len(otherNodes) == 0 {
+				// Add the antenna itself as an antinode since it an antinode will technically take up the same location
+				// as an actual antinode
+				addAntennaAsAntinode(&antinodes, rowIdx, colIdx)
+			}
 
 			// Calculate distance between the node each otherNode add an antinode
-			// on either side (if in bounds of the grid)
+			// on either side (if in bounds of the grid).
+			// NOTE: Bits and pieces of this logic could probably abstracted into reusable functions to
+			// decrease the number of nested if/elses and for-loops
 			for _, otherNode := range otherNodes {
 				diffRow := otherNode[0] - rowIdx // node row will always be lower or equal to otherNode
 				diffCol := util.AbsOfInt(otherNode[1] - colIdx)
 
-				var antinode1 []int
-				var antinode2 []int
+				var antinodeGroup1 [][]int
+				var antinodeGroup2 [][]int
 				if otherNode[1]-colIdx < 0 {
-					// Add antinode in same direction outside of node
-					antinode1 = []int{rowIdx - diffRow, colIdx + diffCol}
-					// Add antinode in same direction outside of otherNode
-					antinode2 = []int{otherNode[0] + diffRow, otherNode[1] - diffCol}
+					//
+					// Going along the right diagonal (/)
+					for {
+						var antinode []int
+						if len(antinodeGroup1) == 0 {
+							antinode = []int{rowIdx - diffRow, colIdx + diffCol}
+						} else {
+							lastAntinode := antinodeGroup1[len(antinodeGroup1)-1]
+							antinode = []int{lastAntinode[0] - diffRow, lastAntinode[1] + diffCol}
+						}
+
+						// Out of bounds, stop finding antinodes in this direction
+						if !isValidAntinode(grid, antinode) {
+							break
+						}
+						antinodeGroup1 = append(antinodeGroup1, antinode)
+					}
+
+					for {
+						var antinode []int
+						if len(antinodeGroup2) == 0 {
+							antinode = []int{otherNode[0] + diffRow, otherNode[1] - diffCol}
+						} else {
+							lastAntinode := antinodeGroup2[len(antinodeGroup2)-1]
+							antinode = []int{lastAntinode[0] + diffRow, lastAntinode[1] - diffCol}
+						}
+
+						// Out of bounds, stop finding antinodes in this direction
+						if !isValidAntinode(grid, antinode) {
+							break
+						}
+						antinodeGroup2 = append(antinodeGroup2, antinode)
+					}
 				} else {
-					// Add antinode in same direction outside of node
-					antinode1 = []int{rowIdx - diffRow, colIdx - diffCol}
-					// Add antinode in same direction outside of otherNode
-					antinode2 = []int{otherNode[0] + diffRow, otherNode[1] + diffCol}
+					//
+					// Going along the left diagonal or straight up/down (\ or |)
+					for {
+						var antinode []int
+						if len(antinodeGroup1) == 0 {
+							antinode = []int{rowIdx - diffRow, colIdx - diffCol}
+						} else {
+							lastAntinode := antinodeGroup1[len(antinodeGroup1)-1]
+							antinode = []int{lastAntinode[0] - diffRow, lastAntinode[1] - diffCol}
+						}
+
+						// Out of bounds, stop finding antinodes in this direction
+						if !isValidAntinode(grid, antinode) {
+							break
+						}
+						antinodeGroup1 = append(antinodeGroup1, antinode)
+					}
+
+					for {
+						var antinode []int
+						if len(antinodeGroup2) == 0 {
+							antinode = []int{otherNode[0] + diffRow, otherNode[1] + diffCol}
+						} else {
+							lastAntinode := antinodeGroup2[len(antinodeGroup2)-1]
+							antinode = []int{lastAntinode[0] + diffRow, lastAntinode[1] + diffCol}
+						}
+
+						// Out of bounds, stop finding antinodes in this direction
+						if !isValidAntinode(grid, antinode) {
+							break
+						}
+						antinodeGroup2 = append(antinodeGroup2, antinode)
+					}
 				}
 
-				if isValidAntinode(grid, antinode1) && isUniqueAntinode(antinodes, antinode1) {
-					antinodes = append(antinodes, antinode1)
+				// Append only unique antinode positions to the slice keeping track of all antinodes
+				antinodeGroups := append(antinodeGroup1, antinodeGroup2...)
+				for _, antinode := range antinodeGroups {
+					if isUniqueAntinode(antinodes, antinode) {
+						antinodes = append(antinodes, antinode)
+					}
 				}
 
-				if isValidAntinode(grid, antinode2) && isUniqueAntinode(antinodes, antinode2) {
-					antinodes = append(antinodes, antinode2)
-				}
+				// Add the antenna itself as an antinode since it an antinode will technically take up the same location
+				// as an actual antinode
+				addAntennaAsAntinode(&antinodes, rowIdx, colIdx)
 			}
 		}
 	}
 
-	fmt.Println("Antinodes", antinodes)
-	fmt.Printf("Part 1 Answer: %d\n", len(antinodes))
+	fmt.Printf("Part 2 Answer: %d\n", len(antinodes))
+}
+
+// Trying out pointers here just for the hell of it. Could just return and
+// reassign the antinodes slice instead
+func addAntennaAsAntinode(antinodes *[][]int, rowIdx int, colIdx int) {
+	antennaAntinode := []int{rowIdx, colIdx}
+	if isUniqueAntinode(*antinodes, antennaAntinode) {
+		*antinodes = append(*antinodes, antennaAntinode)
+	}
 }
 
 func isValidAntinode(grid [][]string, antinode []int) bool {
